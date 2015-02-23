@@ -476,8 +476,7 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @return The ClassInfoCache.
      */
-    private static ClassInfoCache toCacheEntry(final StackTraceElement stackTraceElement,
-        final Class<?> callerClass, final boolean exact) {
+    private static ClassInfoCache toCacheEntry(final Class<?> callerClass, final boolean exact) {
         String location = "?";
         String version = "?";
         ClassLoader lastLoader = null;
@@ -543,7 +542,7 @@ public class EnhancedThrowableProxy implements Serializable {
             // present as those methods have returned.
             ExtendedClassInfo extClassInfo;
             if (clazz != null && className.equals(clazz.getName())) {
-                final ClassInfoCache entry = toCacheEntry(stackTraceElement, clazz, true);
+                final ClassInfoCache entry = toCacheEntry(clazz, true); // exact = true
                 extClassInfo = entry.element;
                 lastLoader = entry.loader;
                 stack.pop();
@@ -556,7 +555,8 @@ public class EnhancedThrowableProxy implements Serializable {
                     if ( entry.loader != null ) lastLoader = entry.loader;
                 }
                 else {
-                    entry = toCacheEntry(stackTraceElement, loadClass(lastLoader, className), false);
+                    Class<?> klass = loadClass(lastLoader, className);
+                    entry = toCacheEntry(klass, false); // exact = false
                     extClassInfo = entry.element;
                     cache.put(stackTraceElement.toString(), entry);
                     if ( entry.loader != null ) lastLoader = entry.loader;
