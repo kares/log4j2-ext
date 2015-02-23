@@ -153,6 +153,15 @@ public class EnhancedThrowableProxy implements Serializable {
         return stackTrace = throwable.getStackTrace();
     }
 
+    private ExtendedStackTraceElement[] getExtendedStackTrace() {
+        return extendedStackTrace;
+    }
+
+    private EnhancedThrowableProxy[] getSuppressedProxies() {
+        if ( suppressedProxies != null ) return suppressedProxies;
+        return suppressedProxies = toSuppressedProxies(throwable);
+    }
+
     @Override
     public boolean equals(final Object obj) {
         if (this == obj) {
@@ -182,7 +191,7 @@ public class EnhancedThrowableProxy implements Serializable {
         } else if (!this.name.equals(other.name)) {
             return false;
         }
-        if (!Arrays.equals(this.extendedStackTrace, other.extendedStackTrace)) {
+        if (!Arrays.equals(this.getExtendedStackTrace(), other.getExtendedStackTrace())) {
             return false;
         }
         if (!Arrays.equals(this.getSuppressedProxies(), other.getSuppressedProxies())) {
@@ -194,7 +203,7 @@ public class EnhancedThrowableProxy implements Serializable {
     @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
     private static void formatCause(final StringBuilder sb, final EnhancedThrowableProxy cause, final Collection<String> ignorePackages) {
         sb.append("Caused by: ").append(cause).append('\n');
-        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(), cause.extendedStackTrace, ignorePackages);
+        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(), cause.getExtendedStackTrace(), ignorePackages);
         if ( cause.causeProxy != null ) formatCause(sb, cause.causeProxy, ignorePackages);
     }
 
@@ -272,7 +281,7 @@ public class EnhancedThrowableProxy implements Serializable {
             sb.append("Wrapped by: ");
         }
         sb.append(cause).append('\n');
-        formatElements(sb, cause.commonElementCount, cause.getStackTrace(), cause.extendedStackTrace, ignorePackages);
+        formatElements(sb, cause.commonElementCount, cause.getStackTrace(), cause.getExtendedStackTrace(), ignorePackages);
     }
 
     public final EnhancedThrowableProxy getCauseProxy() { return this.causeProxy; }
@@ -282,18 +291,12 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @return The formatted Throwable that caused this Throwable.
      */
+    /*
     @SuppressWarnings("unchecked")
     public final CharSequence getCauseStackTraceAsString() {
         return this.getCauseStackTraceAsString(Collections.EMPTY_LIST);
     }
 
-    /**
-     * Format the Throwable that is the cause of this Throwable.
-     *
-     * @param ignorePackages
-     *        The List of packages to be suppressed from the trace.
-     * @return The formatted Throwable that caused this Throwable.
-     */
     final CharSequence getCauseStackTraceAsString(final Collection<String> ignorePackages) {
         final StringBuilder sb = new StringBuilder(256);
         if (this.causeProxy != null) {
@@ -302,7 +305,7 @@ public class EnhancedThrowableProxy implements Serializable {
         }
         sb.append(this.toString());
         sb.append('\n');
-        formatElements(sb, 0, this.throwable.getStackTrace(), this.extendedStackTrace, ignorePackages);
+        formatElements(sb, 0, this.getStackTrace(), this.getExtendedStackTrace(), ignorePackages);
         return sb;
     }
 
@@ -350,7 +353,7 @@ public class EnhancedThrowableProxy implements Serializable {
         if ( msg != null ) sb.append(": ").append(msg);
         sb.append('\n');
 
-        formatElements(sb, 0, getStackTrace(), this.extendedStackTrace, ignorePackages);
+        formatElements(sb, 0, getStackTrace(), this.getExtendedStackTrace(), ignorePackages);
 
         if ( this.causeProxy != null ) formatCause(sb, this.causeProxy, ignorePackages);
 
@@ -371,20 +374,11 @@ public class EnhancedThrowableProxy implements Serializable {
     }
 
     /**
-     * Gets proxies for suppressed exceptions.
-     *
-     * @return proxies for suppressed exceptions.
-     */
-    EnhancedThrowableProxy[] getSuppressedProxies() {
-        if ( suppressedProxies != null ) return suppressedProxies;
-        return suppressedProxies = toSuppressedProxies(throwable);
-    }
-
-    /**
      * Format the suppressed Throwables.
      *
      * @return The formatted suppressed Throwables.
      */
+    /*
     public String getSuppressedStackTrace() {
         final EnhancedThrowableProxy[] suppressed = this.getSuppressedProxies();
         if (suppressed == null || suppressed.length == 0) return Strings.EMPTY;
