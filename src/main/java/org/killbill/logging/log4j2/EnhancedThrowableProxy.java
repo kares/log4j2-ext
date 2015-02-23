@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.net.URL;
 import java.security.CodeSource;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,15 +60,14 @@ public class EnhancedThrowableProxy implements Serializable {
 
     private final EnhancedThrowableProxy causeProxy;
 
-    private int commonElementCount;
-
-    private final ExtendedStackTraceElement[] extendedStackTrace;
-
     private final String localizedMessage;
 
     private final String message;
 
     private final String name;
+
+    private final int commonElementCount;
+    private final ExtendedStackTraceElement[] extendedStackTrace;
 
     private EnhancedThrowableProxy[] suppressedProxies;
 
@@ -81,6 +81,7 @@ public class EnhancedThrowableProxy implements Serializable {
         this.throwable = null;
         this.name = null;
         this.extendedStackTrace = null;
+        this.commonElementCount = 0;
         this.causeProxy = null;
         this.message = null;
         this.localizedMessage = null;
@@ -100,7 +101,11 @@ public class EnhancedThrowableProxy implements Serializable {
         this.localizedMessage = throwable.getLocalizedMessage();
         final Map<String, ClassInfoCache> map = new HashMap<String, ClassInfoCache>();
         final Stack<Class<?>> stack = ReflectionUtil.getCurrentStackTrace();
-        this.extendedStackTrace = toExtendedStackTrace(stack, map, null, throwable.getStackTrace());
+
+        final StackTraceElement[] stackTrace = throwable.getStackTrace();
+        this.extendedStackTrace = toExtendedStackTrace(stack, map, null, stackTrace, stackTrace.length);
+        this.commonElementCount = 0;
+
         final Throwable throwableCause = throwable.getCause();
         this.causeProxy = throwableCause == null ? null : new EnhancedThrowableProxy(throwable, stack, map, throwableCause);
     }
@@ -123,7 +128,21 @@ public class EnhancedThrowableProxy implements Serializable {
         this.name = cause.getClass().getName();
         this.message = this.throwable.getMessage();
         this.localizedMessage = this.throwable.getLocalizedMessage();
-        this.extendedStackTrace = toExtendedStackTrace(stack, map, parent.getStackTrace(), cause.getStackTrace());
+
+        final StackTraceElement[] rootTrace = parent.getStackTrace();
+        final StackTraceElement[] stackTrace = cause.getStackTrace();
+
+        int rootIndex = rootTrace.length - 1;
+        int stackIndex = stackTrace.length - 1;
+        while (rootIndex >= 0 && stackIndex >= 0 && rootTrace[rootIndex].equals(stackTrace[stackIndex])) {
+            --rootIndex;
+            --stackIndex;
+        }
+        this.commonElementCount = stackTrace.length - 1 - stackIndex;
+        final int stackLength = stackIndex + 1;
+
+        this.extendedStackTrace = toExtendedStackTrace(stack, map, rootTrace, stackTrace, stackLength);
+
         this.causeProxy = cause.getCause() == null ? null : new EnhancedThrowableProxy(parent, stack, map, cause.getCause());
     }
 
@@ -166,17 +185,16 @@ public class EnhancedThrowableProxy implements Serializable {
     }
 
     @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    static void formatCause(final StringBuilder sb, final EnhancedThrowableProxy cause, final List<String> ignorePackages) {
+    private static void formatCause(final StringBuilder sb, final EnhancedThrowableProxy cause, final Collection<String> ignorePackages) {
         sb.append("Caused by: ").append(cause).append('\n');
-        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(),
-                cause.extendedStackTrace, ignorePackages);
-        if ( cause.causeProxy != null ) {
-            formatCause(sb, cause.causeProxy, ignorePackages);
-        }
+        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(), cause.extendedStackTrace, ignorePackages);
+        if ( cause.causeProxy != null ) formatCause(sb, cause.causeProxy, ignorePackages);
     }
 
-    static void formatElements(final StringBuilder sb, final int commonCount, final StackTraceElement[] causedTrace,
-            final ExtendedStackTraceElement[] extStackTrace, final List<String> ignorePackages) {
+    private static void formatElements(final StringBuilder sb,
+        final int commonCount, final StackTraceElement[] causedTrace,
+        final ExtendedStackTraceElement[] extStackTrace, final Collection<String> ignorePackages) {
+
         if (ignorePackages == null || ignorePackages.isEmpty()) {
             for (final ExtendedStackTraceElement element : extStackTrace) {
                 formatEntry(element, sb);
@@ -400,12 +418,10 @@ public class EnhancedThrowableProxy implements Serializable {
         return result;
     }
 
-    private static boolean ignoreElement(final StackTraceElement element, final List<String> ignorePackages) {
+    private static boolean ignoreElement(final StackTraceElement element, final Collection<String> ignorePackages) {
         final String className = element.getClassName();
-        for (final String pkg : ignorePackages) {
-            if (className.startsWith(pkg)) {
-                return true;
-            }
+        for ( final String pkg : ignorePackages ) {
+            if ( className.startsWith(pkg) ) return true;
         }
         return false;
     }
@@ -510,27 +526,16 @@ public class EnhancedThrowableProxy implements Serializable {
      *        The stack trace being resolved.
      * @return The StackTracePackageElement array.
      */
-    private ExtendedStackTraceElement[] toExtendedStackTrace(final Stack<Class<?>> stack,
+    private static ExtendedStackTraceElement[] toExtendedStackTrace(final Stack<Class<?>> stack,
             final Map<String, ClassInfoCache> map,
-            final StackTraceElement[] rootTrace, final StackTraceElement[] stackTrace) {
-        int stackLength;
-        if (rootTrace != null) {
-            int rootIndex = rootTrace.length - 1;
-            int stackIndex = stackTrace.length - 1;
-            while (rootIndex >= 0 && stackIndex >= 0 && rootTrace[rootIndex].equals(stackTrace[stackIndex])) {
-                --rootIndex;
-                --stackIndex;
-            }
-            this.commonElementCount = stackTrace.length - 1 - stackIndex;
-            stackLength = stackIndex + 1;
-        } else {
-            this.commonElementCount = 0;
-            stackLength = stackTrace.length;
-        }
+            final StackTraceElement[] rootTrace, final StackTraceElement[] stackTrace, final int stackLength) {
+
         final ExtendedStackTraceElement[] extStackTrace = new ExtendedStackTraceElement[stackLength];
+
         Class<?> clazz = stack.isEmpty() ? null : stack.peek();
         ClassLoader lastLoader = null;
-        for (int i = stackLength - 1; i >= 0; --i) {
+
+        for ( int i = stackLength - 1; i >= 0; --i ) {
             final StackTraceElement stackTraceElement = stackTrace[i];
             final String className = stackTraceElement.getClassName();
             // The stack returned from getCurrentStack may be missing entries for java.lang.reflect.Method.invoke()
