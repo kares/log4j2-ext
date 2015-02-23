@@ -272,7 +272,7 @@ public class EnhancedThrowableProxy implements Serializable {
             sb.append("Wrapped by: ");
         }
         sb.append(cause).append('\n');
-        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(), cause.extendedStackTrace, ignorePackages);
+        formatElements(sb, cause.commonElementCount, cause.getStackTrace(), cause.extendedStackTrace, ignorePackages);
     }
 
     public final EnhancedThrowableProxy getCauseProxy() { return this.causeProxy; }
