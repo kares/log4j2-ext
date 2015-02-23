@@ -350,6 +350,7 @@ public class EnhancedThrowableProxy implements Serializable {
         return sb.toString();
     }
 
+    /*
     public final String getLocalizedMessage() {
         return this.localizedMessage;
     }
@@ -358,11 +359,6 @@ public class EnhancedThrowableProxy implements Serializable {
         return this.message;
     }
 
-    /**
-     * Return the FQCN of the Throwable.
-     *
-     * @return The FQCN of the Throwable.
-     */
     public final String getName() {
         return this.name;
     }
