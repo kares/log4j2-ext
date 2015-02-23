@@ -558,7 +558,7 @@ public class EnhancedThrowableProxy implements Serializable {
                     Class<?> klass = loadClass(lastLoader, className);
                     entry = toCacheEntry(klass, false); // exact = false
                     extClassInfo = entry.element;
-                    cache.put(stackTraceElement.toString(), entry);
+                    cache.put(className, entry);
                     if ( entry.loader != null ) lastLoader = entry.loader;
                 }
             }
