@@ -42,7 +42,7 @@ import org.apache.logging.log4j.util.ReflectionUtil;
  * @author kares
  */
 // NOTE: would have extended ThrowableProxy but seeems meaningless at this point
-public class EnhancedThrowableProxy implements Serializable {
+/* public */ class EnhancedThrowableProxy implements Serializable {
 
     private static final long serialVersionUID = 7526536621491366135L;
 

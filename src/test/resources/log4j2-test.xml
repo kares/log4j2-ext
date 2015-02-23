@@ -2,7 +2,7 @@
 <Configuration status="INFO" packages="org.killbill.logging.log4j">
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{DEFAULT} [%t] %-5level %logger{36} - %msg%n%fException"/>
+      <PatternLayout pattern="%d{DEFAULT} [%t] %-5level %logger{36} - %msg%n%yException"/>
     </Console>
   </Appenders>
   <Loggers>

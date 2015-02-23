@@ -24,19 +24,26 @@ import org.apache.logging.log4j.core.pattern.ThrowablePatternConverter;
 import org.apache.logging.log4j.core.util.Constants;
 
 /**
+ * An "improved" version of the built-in (default) extended throwable converter
+ * {@link org.apache.logging.log4j.core.pattern.ExtendedThrowablePatternConverter}
+ * ... which gets installed by default for a PatternLayout to handle all exception's
+ * stack-traces  if there's no other converter handling throwables (such as this one).
+ *
+ * @see org.apache.logging.log4j.core.pattern.PatternParser#parse(String, boolean, boolean)
  *
  * @author kares
  */
-@Plugin(name = "FilteredThrowablePatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "fEx", "fThrowable", "fException" })
-public class FilteredThrowablePatternConverter extends ThrowablePatternConverter {
+@Plugin(name = "YmprovedThrowablePatternConverter", category = PatternConverter.CATEGORY)
+@ConverterKeys({ "yEx", "yThrowable", "yException" })
+// NOTE: "mirroring" ExtendedThrowable's { "xEx", "xThrowable", "xException" }
+public class YmprovedThrowablePatternConverter extends ThrowablePatternConverter {
 
-    protected FilteredThrowablePatternConverter(final String[] options) {
-        super("FilteredThrowable", "throwable", options);
+    protected YmprovedThrowablePatternConverter(final String[] options) {
+        super("YmprovedThrowable", "throwable", options);
     }
 
-    public static FilteredThrowablePatternConverter newInstance(final String[] options) {
-        return new FilteredThrowablePatternConverter(options);
+    public static YmprovedThrowablePatternConverter newInstance(final String[] options) {
+        return new YmprovedThrowablePatternConverter(options);
     }
 
     /**
