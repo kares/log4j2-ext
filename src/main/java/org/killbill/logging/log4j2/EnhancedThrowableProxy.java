@@ -20,8 +20,8 @@ import java.net.URL;
 import java.security.CodeSource;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import org.apache.logging.log4j.core.impl.ExtendedClassInfo;
@@ -254,19 +254,18 @@ public class EnhancedThrowableProxy implements Serializable {
      *        StringBuilder to contain the formatted Throwable.
      * @param cause
      *        The Throwable to format.
-     * @param packages
+     * @param ignorePackages
      *        The List of packages to be suppressed from the trace.
      */
     @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    static void formatWrapper(final StringBuilder sb, final EnhancedThrowableProxy cause, final List<String> packages) {
+    private static void formatWrapper(final StringBuilder sb, final EnhancedThrowableProxy cause, final Collection<String> ignorePackages) {
         final Throwable caused = cause.getCauseProxy() != null ? cause.getCauseProxy().getThrowable() : null;
         if (caused != null) {
             formatWrapper(sb, cause.causeProxy);
             sb.append("Wrapped by: ");
         }
         sb.append(cause).append('\n');
-        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(),
-                cause.extendedStackTrace, packages);
+        formatElements(sb, cause.commonElementCount, cause.getThrowable().getStackTrace(), cause.extendedStackTrace, ignorePackages);
     }
 
     public final EnhancedThrowableProxy getCauseProxy() { return this.causeProxy; }
@@ -276,18 +275,19 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @return The formatted Throwable that caused this Throwable.
      */
-    public String getCauseStackTraceAsString() {
-        return this.getCauseStackTraceAsString(null);
+    @SuppressWarnings("unchecked")
+    public final String getCauseStackTraceAsString() {
+        return this.getCauseStackTraceAsString(Collections.EMPTY_LIST);
     }
 
     /**
      * Format the Throwable that is the cause of this Throwable.
      *
-     * @param packages
+     * @param ignorePackages
      *        The List of packages to be suppressed from the trace.
      * @return The formatted Throwable that caused this Throwable.
      */
-    public String getCauseStackTraceAsString(final List<String> packages) {
+    final String getCauseStackTraceAsString(final Collection<String> ignorePackages) {
         final StringBuilder sb = new StringBuilder(256);
         if (this.causeProxy != null) {
             formatWrapper(sb, this.causeProxy);
@@ -295,7 +295,7 @@ public class EnhancedThrowableProxy implements Serializable {
         }
         sb.append(this.toString());
         sb.append('\n');
-        formatElements(sb, 0, this.throwable.getStackTrace(), this.extendedStackTrace, packages);
+        formatElements(sb, 0, this.throwable.getStackTrace(), this.extendedStackTrace, ignorePackages);
         return sb.toString();
     }
 
@@ -325,8 +325,9 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @return The formatted stack trace including packaging information.
      */
-    public String getExtendedStackTraceAsString() {
-        return this.getExtendedStackTraceAsString(null);
+    @SuppressWarnings("unchecked")
+    public final String getExtendedStackTraceAsString() {
+        return this.getExtendedStackTraceAsString(Collections.EMPTY_LIST);
     }
 
     /**
@@ -336,25 +337,24 @@ public class EnhancedThrowableProxy implements Serializable {
      *        List of packages to be ignored in the trace.
      * @return The formatted stack trace including packaging information.
      */
-    public String getExtendedStackTraceAsString(final List<String> ignorePackages) {
+    final String getExtendedStackTraceAsString(final Collection<String> ignorePackages) {
         final StringBuilder sb = new StringBuilder(512).append(this.name);
         final String msg = this.message;
-        if (msg != null) {
-            sb.append(": ").append(msg);
-        }
+        if ( msg != null ) sb.append(": ").append(msg);
         sb.append('\n');
+
         formatElements(sb, 0, this.throwable.getStackTrace(), this.extendedStackTrace, ignorePackages);
-        if (this.causeProxy != null) {
-            formatCause(sb, this.causeProxy, ignorePackages);
-        }
+
+        if ( this.causeProxy != null ) formatCause(sb, this.causeProxy, ignorePackages);
+
         return sb.toString();
     }
 
-    public String getLocalizedMessage() {
+    public final String getLocalizedMessage() {
         return this.localizedMessage;
     }
 
-    public String getMessage() {
+    public final String getMessage() {
         return this.message;
     }
 
@@ -363,7 +363,7 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @return The FQCN of the Throwable.
      */
-    public String getName() {
+    public final String getName() {
         return this.name;
     }
 
@@ -413,7 +413,7 @@ public class EnhancedThrowableProxy implements Serializable {
         result = prime * result + (this.causeProxy == null ? 0 : this.causeProxy.hashCode());
         result = prime * result + this.commonElementCount;
         result = prime * result + (this.extendedStackTrace == null ? 0 : Arrays.hashCode(this.extendedStackTrace));
-        result = prime * result + ( Arrays.hashCode(getSuppressedProxies()) );
+        // result = prime * result + ( Arrays.hashCode(getSuppressedProxies()) );
         result = prime * result + (this.name == null ? 0 : this.name.hashCode());
         return result;
     }
