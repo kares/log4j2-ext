@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.killbill.logging.log4j2;
+package org.killbill.logging.log4j;
 
 import java.io.Serializable;
 import java.net.URL;
@@ -426,14 +426,13 @@ public class EnhancedThrowableProxy implements Serializable {
         if (lastLoader != null) {
             try {
                 clazz = Loader.initializeClass(className, lastLoader);
-                if (clazz != null) {
-                    return clazz;
-                }
+                if ( clazz != null ) return clazz;
             }
-            catch (final Throwable ignore) {
+            catch (final Exception e) {
                 // Ignore exception.
             }
         }
+
         try {
             clazz = Loader.loadClass(className);
         }
@@ -442,10 +441,13 @@ public class EnhancedThrowableProxy implements Serializable {
             try {
                 clazz = Loader.initializeClass(className, thisLoader);
             }
-            catch (final ClassNotFoundException ignore) {
+            catch (final Exception e) {
                 return null;
             }
         }
+        //catch (final RuntimeException e) { /* IllegalArgumentException */
+        //    return null;
+        //}
         return clazz;
     }
 
