@@ -99,15 +99,15 @@ public class EnhancedThrowableProxy implements Serializable {
         this.name = throwable.getClass().getName();
         this.message = throwable.getMessage();
         this.localizedMessage = throwable.getLocalizedMessage();
-        final Map<String, ClassInfoCache> map = new HashMap<String, ClassInfoCache>();
+        final Map<String, ClassInfoCache> cache = new HashMap<String, ClassInfoCache>();
         final Stack<Class<?>> stack = ReflectionUtil.getCurrentStackTrace();
 
         final StackTraceElement[] stackTrace = throwable.getStackTrace();
-        this.extendedStackTrace = toExtendedStackTrace(stack, map, null, stackTrace, stackTrace.length);
+        this.extendedStackTrace = toExtendedStackTrace(stack, cache, stackTrace, stackTrace.length);
         this.commonElementCount = 0;
 
         final Throwable throwableCause = throwable.getCause();
-        this.causeProxy = throwableCause == null ? null : new EnhancedThrowableProxy(throwable, stack, map, throwableCause);
+        this.causeProxy = throwableCause == null ? null : new EnhancedThrowableProxy(throwable, stack, cache, throwableCause);
     }
 
     /**
@@ -117,12 +117,12 @@ public class EnhancedThrowableProxy implements Serializable {
      *        The Throwable referencing this Throwable.
      * @param stack
      *        The Class stack.
-     * @param map
+     * @param cache
      *        The cache containing the packaging data.
      * @param cause
      *        The Throwable to wrap.
      */
-    private EnhancedThrowableProxy(final Throwable parent, final Stack<Class<?>> stack, final Map<String, ClassInfoCache> map,
+    private EnhancedThrowableProxy(final Throwable parent, final Stack<Class<?>> stack, final Map<String, ClassInfoCache> cache,
             final Throwable cause) {
         this.throwable = cause;
         this.name = cause.getClass().getName();
@@ -141,9 +141,9 @@ public class EnhancedThrowableProxy implements Serializable {
         this.commonElementCount = stackTrace.length - 1 - stackIndex;
         final int stackLength = stackIndex + 1;
 
-        this.extendedStackTrace = toExtendedStackTrace(stack, map, rootTrace, stackTrace, stackLength);
+        this.extendedStackTrace = toExtendedStackTrace(stack, cache, stackTrace, stackLength);
 
-        this.causeProxy = cause.getCause() == null ? null : new EnhancedThrowableProxy(parent, stack, map, cause.getCause());
+        this.causeProxy = cause.getCause() == null ? null : new EnhancedThrowableProxy(parent, stack, cache, cause.getCause());
     }
 
     @Override
@@ -518,7 +518,7 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @param stack
      *        The callers Class stack.
-     * @param map
+     * @param cache
      *        The cache of ClassInfoCache objects.
      * @param rootTrace
      *        The first stack trace resolve or null.
@@ -527,8 +527,8 @@ public class EnhancedThrowableProxy implements Serializable {
      * @return The StackTracePackageElement array.
      */
     private static ExtendedStackTraceElement[] toExtendedStackTrace(final Stack<Class<?>> stack,
-            final Map<String, ClassInfoCache> map,
-            final StackTraceElement[] rootTrace, final StackTraceElement[] stackTrace, final int stackLength) {
+            final Map<String, ClassInfoCache> cache,
+            final StackTraceElement[] stackTrace, final int stackLength) {
 
         final ExtendedStackTraceElement[] extStackTrace = new ExtendedStackTraceElement[stackLength];
 
@@ -550,19 +550,16 @@ public class EnhancedThrowableProxy implements Serializable {
                 clazz = stack.isEmpty() ? null : stack.peek();
             }
             else {
-                if (map.containsKey(className)) {
-                    final ClassInfoCache entry = map.get(className);
+                ClassInfoCache entry = cache.get(className);
+                if ( entry != null ) {
                     extClassInfo = entry.element;
-                    if (entry.loader != null) {
-                        lastLoader = entry.loader;
-                    }
-                } else {
-                    final ClassInfoCache entry = toCacheEntry(stackTraceElement, loadClass(lastLoader, className), false);
+                    if ( entry.loader != null ) lastLoader = entry.loader;
+                }
+                else {
+                    entry = toCacheEntry(stackTraceElement, loadClass(lastLoader, className), false);
                     extClassInfo = entry.element;
-                    map.put(stackTraceElement.toString(), entry);
-                    if (entry.loader != null) {
-                        lastLoader = entry.loader;
-                    }
+                    cache.put(stackTraceElement.toString(), entry);
+                    if ( entry.loader != null ) lastLoader = entry.loader;
                 }
             }
             extStackTrace[i] = new ExtendedStackTraceElement(stackTraceElement, extClassInfo);
