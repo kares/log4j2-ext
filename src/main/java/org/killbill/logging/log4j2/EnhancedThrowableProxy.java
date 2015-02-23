@@ -46,12 +46,12 @@ public class EnhancedThrowableProxy implements Serializable {
 
     static final EnhancedThrowableProxy[] EMPTY_THROWABLE_PROXY_ARRAY = new EnhancedThrowableProxy[0];
 
-    private static class ClassInfoCache {
+    private static class CachedClassInfo {
 
         final ExtendedClassInfo element;
         final ClassLoader loader;
 
-        ClassInfoCache(final ExtendedClassInfo element, final ClassLoader loader) {
+        CachedClassInfo(final ExtendedClassInfo element, final ClassLoader loader) {
             this.element = element;
             this.loader = loader;
         }
@@ -99,10 +99,12 @@ public class EnhancedThrowableProxy implements Serializable {
         this.name = throwable.getClass().getName();
         this.message = throwable.getMessage();
         this.localizedMessage = throwable.getLocalizedMessage();
-        final Map<String, ClassInfoCache> cache = new HashMap<String, ClassInfoCache>();
+
         final Stack<Class<?>> stack = ReflectionUtil.getCurrentStackTrace();
 
         final StackTraceElement[] stackTrace = throwable.getStackTrace();
+        final Map<String, CachedClassInfo> cache = new HashMap<String, CachedClassInfo>(stackTrace.length);
+
         this.extendedStackTrace = toExtendedStackTrace(stack, cache, stackTrace, stackTrace.length);
         this.commonElementCount = 0;
 
@@ -122,7 +124,7 @@ public class EnhancedThrowableProxy implements Serializable {
      * @param cause
      *        The Throwable to wrap.
      */
-    private EnhancedThrowableProxy(final Throwable parent, final Stack<Class<?>> stack, final Map<String, ClassInfoCache> cache,
+    private EnhancedThrowableProxy(final Throwable parent, final Stack<Class<?>> stack, final Map<String, CachedClassInfo> cache,
             final Throwable cause) {
         this.throwable = cause;
         this.name = cause.getClass().getName();
@@ -132,11 +134,9 @@ public class EnhancedThrowableProxy implements Serializable {
         final StackTraceElement[] rootTrace = parent.getStackTrace();
         final StackTraceElement[] stackTrace = cause.getStackTrace();
 
-        int rootIndex = rootTrace.length - 1;
-        int stackIndex = stackTrace.length - 1;
+        int rootIndex = rootTrace.length - 1; int stackIndex = stackTrace.length - 1;
         while (rootIndex >= 0 && stackIndex >= 0 && rootTrace[rootIndex].equals(stackTrace[stackIndex])) {
-            --rootIndex;
-            --stackIndex;
+            --rootIndex; --stackIndex;
         }
         this.commonElementCount = stackTrace.length - 1 - stackIndex;
         final int stackLength = stackIndex + 1;
@@ -476,7 +476,7 @@ public class EnhancedThrowableProxy implements Serializable {
      *
      * @return The ClassInfoCache.
      */
-    private static ClassInfoCache toCacheEntry(final Class<?> callerClass, final boolean exact) {
+    private static CachedClassInfo toCacheEntry(final Class<?> callerClass, final boolean exact) {
         String location = "?";
         String version = "?";
         ClassLoader lastLoader = null;
@@ -509,7 +509,7 @@ public class EnhancedThrowableProxy implements Serializable {
             }
             lastLoader = callerClass.getClassLoader();
         }
-        return new ClassInfoCache(new ExtendedClassInfo(exact, location, version), lastLoader);
+        return new CachedClassInfo(new ExtendedClassInfo(exact, location, version), lastLoader);
     }
 
     /**
@@ -526,7 +526,7 @@ public class EnhancedThrowableProxy implements Serializable {
      * @return The StackTracePackageElement array.
      */
     private static ExtendedStackTraceElement[] toExtendedStackTrace(final Stack<Class<?>> stack,
-            final Map<String, ClassInfoCache> cache,
+            final Map<String, CachedClassInfo> cache,
             final StackTraceElement[] stackTrace, final int stackLength) {
 
         final ExtendedStackTraceElement[] extStackTrace = new ExtendedStackTraceElement[stackLength];
@@ -542,14 +542,14 @@ public class EnhancedThrowableProxy implements Serializable {
             // present as those methods have returned.
             ExtendedClassInfo extClassInfo;
             if (clazz != null && className.equals(clazz.getName())) {
-                final ClassInfoCache entry = toCacheEntry(clazz, true); // exact = true
+                final CachedClassInfo entry = toCacheEntry(clazz, true); // exact = true
                 extClassInfo = entry.element;
                 lastLoader = entry.loader;
                 stack.pop();
                 clazz = stack.isEmpty() ? null : stack.peek();
             }
             else {
-                ClassInfoCache entry = cache.get(className);
+                CachedClassInfo entry = cache.get(className);
                 if ( entry != null ) {
                     extClassInfo = entry.element;
                     if ( entry.loader != null ) lastLoader = entry.loader;
