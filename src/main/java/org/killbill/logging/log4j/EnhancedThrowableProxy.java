@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.impl.ExtendedClassInfo;
 import org.apache.logging.log4j.core.impl.ExtendedStackTraceElement;
 //import org.apache.logging.log4j.core.impl.ThrowableProxy;
@@ -31,7 +33,7 @@ import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.core.util.Throwables;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.ReflectionUtil;
-import org.apache.logging.log4j.util.Strings;
+//import org.apache.logging.log4j.util.Strings;
 
 /**
  * @note {@link org.apache.logging.log4j.core.impl.ThrowableProxy} might still
@@ -43,6 +45,8 @@ import org.apache.logging.log4j.util.Strings;
 public class EnhancedThrowableProxy implements Serializable {
 
     private static final long serialVersionUID = 7526536621491366135L;
+
+    private static final Logger LOGGER = StatusLogger.getLogger();
 
     static final EnhancedThrowableProxy[] EMPTY_THROWABLE_PROXY_ARRAY = new EnhancedThrowableProxy[0];
 
@@ -428,27 +432,45 @@ public class EnhancedThrowableProxy implements Serializable {
                 clazz = Loader.initializeClass(className, lastLoader);
                 if ( clazz != null ) return clazz;
             }
+            catch (final ClassNotFoundException ignored) { /* noop */ }
             catch (final Exception e) {
-                // Ignore exception.
+                LOGGER.info("loadClass( {} ) initialize using last loader {} failed {}", className, lastLoader, e);
             }
         }
 
         try {
-            clazz = Loader.loadClass(className);
+            clazz = loaderDelegate.loadClass(className);
         }
-        catch (final ClassNotFoundException ignored) {
-            final ClassLoader thisLoader = EnhancedThrowableProxy.class.getClassLoader();
+        catch (final ClassNotFoundException notFound) {
+            ClassLoader thisLoader = null;
             try {
+                thisLoader = EnhancedThrowableProxy.class.getClassLoader();
                 clazz = Loader.initializeClass(className, thisLoader);
             }
+            catch (final ClassNotFoundException ignored) { return null; }
             catch (final Exception e) {
+                if ( thisLoader != null ) {
+                    LOGGER.info("loadClass( {} ) initialize using this loader {} failed {}", className, thisLoader, e);
+                }
                 return null;
             }
         }
-        //catch (final RuntimeException e) { /* IllegalArgumentException */
-        //    return null;
-        //}
+        catch (final RuntimeException e) { /* "custom" loaders e.g. on TC */
+            LOGGER.warn("loadClass( {} ) loading class failed {}", className, e);
+            return null;
+        }
         return clazz;
+    }
+
+    // NOTE: only due testability
+    static LoaderDelegate loaderDelegate = new LoaderDelegate();
+
+    static class LoaderDelegate {
+
+        Class<?> loadClass(final String name) throws ClassNotFoundException, RuntimeException {
+            return Loader.loadClass(name);
+        }
+
     }
 
     /**
@@ -464,9 +486,7 @@ public class EnhancedThrowableProxy implements Serializable {
      * @return The ClassInfoCache.
      */
     private static CachedClassInfo toCacheEntry(final Class<?> callerClass, final boolean exact) {
-        String location = "?";
-        String version = "?";
-        ClassLoader lastLoader = null;
+        String location = "?"; String version = "?"; ClassLoader lastLoader = null;
         if (callerClass != null) {
             try {
                 final CodeSource source = callerClass.getProtectionDomain().getCodeSource();
@@ -484,9 +504,10 @@ public class EnhancedThrowableProxy implements Serializable {
                     }
                 }
             }
-            catch (final Exception ex) {
-                // Ignore the exception.
+            catch (final Exception e) {
+                LOGGER.debug("code source location for class {} failed {}", callerClass, e);
             }
+
             final Package pkg = callerClass.getPackage();
             if (pkg != null) {
                 final String ver = pkg.getImplementationVersion();
@@ -573,7 +594,7 @@ public class EnhancedThrowableProxy implements Serializable {
             return proxies;
         }
         catch (final RuntimeException e) {
-            StatusLogger.getLogger().error(e);
+            LOGGER.error("toSuppressedProxies( {} ) failed {}", thrown, e);
         }
         return null;
     }
