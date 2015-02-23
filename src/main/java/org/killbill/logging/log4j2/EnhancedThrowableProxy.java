@@ -72,6 +72,8 @@ public class EnhancedThrowableProxy implements Serializable {
     private EnhancedThrowableProxy[] suppressedProxies;
 
     private final transient Throwable throwable;
+    // cache to avoid calling getStackTrace twice :
+    private transient StackTraceElement[] stackTrace;
 
     /**
      * For JSON and XML IO via Jackson.
@@ -102,7 +104,7 @@ public class EnhancedThrowableProxy implements Serializable {
 
         final Stack<Class<?>> stack = ReflectionUtil.getCurrentStackTrace();
 
-        final StackTraceElement[] stackTrace = throwable.getStackTrace();
+        final StackTraceElement[] stackTrace = getStackTrace();
         final Map<String, CachedClassInfo> cache = new HashMap<String, CachedClassInfo>(stackTrace.length);
 
         this.extendedStackTrace = toExtendedStackTrace(stack, cache, stackTrace, stackTrace.length);
@@ -132,7 +134,7 @@ public class EnhancedThrowableProxy implements Serializable {
         this.localizedMessage = this.throwable.getLocalizedMessage();
 
         final StackTraceElement[] rootTrace = parent.getStackTrace();
-        final StackTraceElement[] stackTrace = cause.getStackTrace();
+        final StackTraceElement[] stackTrace = getStackTrace();
 
         int rootIndex = rootTrace.length - 1; int stackIndex = stackTrace.length - 1;
         while (rootIndex >= 0 && stackIndex >= 0 && rootTrace[rootIndex].equals(stackTrace[stackIndex])) {
@@ -144,6 +146,11 @@ public class EnhancedThrowableProxy implements Serializable {
         this.extendedStackTrace = toExtendedStackTrace(stack, cache, stackTrace, stackLength);
 
         this.causeProxy = cause.getCause() == null ? null : new EnhancedThrowableProxy(parent, stack, cache, cause.getCause());
+    }
+
+    private StackTraceElement[] getStackTrace() {
+        if ( stackTrace != null ) return stackTrace;
+        return stackTrace = throwable.getStackTrace();
     }
 
     @Override
@@ -276,7 +283,7 @@ public class EnhancedThrowableProxy implements Serializable {
      * @return The formatted Throwable that caused this Throwable.
      */
     @SuppressWarnings("unchecked")
-    public final String getCauseStackTraceAsString() {
+    public final CharSequence getCauseStackTraceAsString() {
         return this.getCauseStackTraceAsString(Collections.EMPTY_LIST);
     }
 
@@ -287,7 +294,7 @@ public class EnhancedThrowableProxy implements Serializable {
      *        The List of packages to be suppressed from the trace.
      * @return The formatted Throwable that caused this Throwable.
      */
-    final String getCauseStackTraceAsString(final Collection<String> ignorePackages) {
+    final CharSequence getCauseStackTraceAsString(final Collection<String> ignorePackages) {
         final StringBuilder sb = new StringBuilder(256);
         if (this.causeProxy != null) {
             formatWrapper(sb, this.causeProxy);
@@ -296,7 +303,7 @@ public class EnhancedThrowableProxy implements Serializable {
         sb.append(this.toString());
         sb.append('\n');
         formatElements(sb, 0, this.throwable.getStackTrace(), this.extendedStackTrace, ignorePackages);
-        return sb.toString();
+        return sb;
     }
 
     /**
@@ -326,7 +333,7 @@ public class EnhancedThrowableProxy implements Serializable {
      * @return The formatted stack trace including packaging information.
      */
     @SuppressWarnings("unchecked")
-    public final String getExtendedStackTraceAsString() {
+    public final CharSequence getExtendedStackTraceAsString() {
         return this.getExtendedStackTraceAsString(Collections.EMPTY_LIST);
     }
 
@@ -337,17 +344,17 @@ public class EnhancedThrowableProxy implements Serializable {
      *        List of packages to be ignored in the trace.
      * @return The formatted stack trace including packaging information.
      */
-    final String getExtendedStackTraceAsString(final Collection<String> ignorePackages) {
+    final CharSequence getExtendedStackTraceAsString(final Collection<String> ignorePackages) {
         final StringBuilder sb = new StringBuilder(512).append(this.name);
         final String msg = this.message;
         if ( msg != null ) sb.append(": ").append(msg);
         sb.append('\n');
 
-        formatElements(sb, 0, this.throwable.getStackTrace(), this.extendedStackTrace, ignorePackages);
+        formatElements(sb, 0, getStackTrace(), this.extendedStackTrace, ignorePackages);
 
         if ( this.causeProxy != null ) formatCause(sb, this.causeProxy, ignorePackages);
 
-        return sb.toString();
+        return sb;
     }
 
     /*
@@ -361,10 +368,6 @@ public class EnhancedThrowableProxy implements Serializable {
 
     public final String getName() {
         return this.name;
-    }
-
-    public StackTraceElement[] getStackTrace() {
-        return this.throwable == null ? null : this.throwable.getStackTrace();
     }
 
     /**
@@ -586,4 +589,5 @@ public class EnhancedThrowableProxy implements Serializable {
         }
         return null;
     }
+
 }

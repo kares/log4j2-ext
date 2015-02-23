@@ -18,7 +18,6 @@ package org.killbill.logging.log4j2;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.core.pattern.ConverterKeys;
 import org.apache.logging.log4j.core.pattern.PatternConverter;
 import org.apache.logging.log4j.core.pattern.ThrowablePatternConverter;
@@ -29,7 +28,7 @@ import org.apache.logging.log4j.core.util.Constants;
  * @author kares
  */
 @Plugin(name = "FilteredThrowablePatternConverter", category = PatternConverter.CATEGORY)
-//@ConverterKeys({ "xEx", "xThrowable", "xException" })
+@ConverterKeys({ "fEx", "fThrowable", "fException" })
 public class FilteredThrowablePatternConverter extends ThrowablePatternConverter {
 
     protected FilteredThrowablePatternConverter(final String[] options) {
@@ -56,21 +55,19 @@ public class FilteredThrowablePatternConverter extends ThrowablePatternConverter
                 super.format(event, toAppendTo); return;
             }
 
-            final String trace = proxy.getExtendedStackTraceAsString(options.getPackages());
+            final CharSequence trace = proxy.getExtendedStackTraceAsString(options.getPackages());
             final int len = toAppendTo.length();
             if ( len > 0 && ! Character.isWhitespace( toAppendTo.charAt(len - 1) ) ) {
                 toAppendTo.append(' ');
             }
             if ( ! options.allLines() || ! Constants.LINE_SEPARATOR.equals( options.getSeparator() ) ) {
-                final StringBuilder sb = new StringBuilder();
-                final String[] array = trace.split(Constants.LINE_SEPARATOR);
-                final int limit = options.minLines(array.length) - 1;
-                for (int i = 0; i <= limit; ++i) {
-                    sb.append( array[i] );
-                    if ( i < limit ) sb.append( options.getSeparator() );
+                final String[] stackTrace = trace.toString().split( Constants.LINE_SEPARATOR );
+                final int limit = options.minLines(stackTrace.length) - 1;
+                final String separator = options.getSeparator();
+                for ( int i = 0; i <= limit; ++i ) {
+                    toAppendTo.append( stackTrace[i] );
+                    if ( i < limit ) toAppendTo.append( separator );
                 }
-                toAppendTo.append(sb);
-
             }
             else {
                 toAppendTo.append(trace);
