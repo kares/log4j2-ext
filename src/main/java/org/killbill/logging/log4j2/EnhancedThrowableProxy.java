@@ -69,7 +69,7 @@ public class EnhancedThrowableProxy implements Serializable {
 
     private final String name;
 
-    private final EnhancedThrowableProxy[] suppressedProxies;
+    private EnhancedThrowableProxy[] suppressedProxies;
 
     private final transient Throwable throwable;
 
@@ -103,7 +103,6 @@ public class EnhancedThrowableProxy implements Serializable {
         this.extendedStackTrace = toExtendedStackTrace(stack, map, null, throwable.getStackTrace());
         final Throwable throwableCause = throwable.getCause();
         this.causeProxy = throwableCause == null ? null : new EnhancedThrowableProxy(throwable, stack, map, throwableCause);
-        this.suppressedProxies = toSuppressedProxies(throwable);
     }
 
     /**
@@ -126,7 +125,6 @@ public class EnhancedThrowableProxy implements Serializable {
         this.localizedMessage = this.throwable.getLocalizedMessage();
         this.extendedStackTrace = toExtendedStackTrace(stack, map, parent.getStackTrace(), cause.getStackTrace());
         this.causeProxy = cause.getCause() == null ? null : new EnhancedThrowableProxy(parent, stack, map, cause.getCause());
-        this.suppressedProxies = toSuppressedProxies(cause);
     }
 
     @Override
@@ -161,7 +159,7 @@ public class EnhancedThrowableProxy implements Serializable {
         if (!Arrays.equals(this.extendedStackTrace, other.extendedStackTrace)) {
             return false;
         }
-        if (!Arrays.equals(this.suppressedProxies, other.suppressedProxies)) {
+        if (!Arrays.equals(this.getSuppressedProxies(), other.getSuppressedProxies())) {
             return false;
         }
         return true;
@@ -361,7 +359,8 @@ public class EnhancedThrowableProxy implements Serializable {
      * @return proxies for suppressed exceptions.
      */
     EnhancedThrowableProxy[] getSuppressedProxies() {
-        return this.suppressedProxies;
+        if ( suppressedProxies != null ) return suppressedProxies;
+        return suppressedProxies = toSuppressedProxies(throwable);
     }
 
     /**
@@ -396,7 +395,7 @@ public class EnhancedThrowableProxy implements Serializable {
         result = prime * result + (this.causeProxy == null ? 0 : this.causeProxy.hashCode());
         result = prime * result + this.commonElementCount;
         result = prime * result + (this.extendedStackTrace == null ? 0 : Arrays.hashCode(this.extendedStackTrace));
-        result = prime * result + (this.suppressedProxies == null ? 0 : Arrays.hashCode(this.suppressedProxies));
+        result = prime * result + ( Arrays.hashCode(getSuppressedProxies()) );
         result = prime * result + (this.name == null ? 0 : this.name.hashCode());
         return result;
     }
