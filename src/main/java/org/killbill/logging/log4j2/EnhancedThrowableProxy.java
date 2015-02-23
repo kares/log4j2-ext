@@ -60,7 +60,7 @@ public class EnhancedThrowableProxy implements Serializable {
 
     private final EnhancedThrowableProxy causeProxy;
 
-    private final String localizedMessage;
+    //private final String localizedMessage;
 
     private final String message;
 
@@ -86,7 +86,7 @@ public class EnhancedThrowableProxy implements Serializable {
         this.commonElementCount = 0;
         this.causeProxy = null;
         this.message = null;
-        this.localizedMessage = null;
+        //this.localizedMessage = null;
         this.suppressedProxies = EMPTY_THROWABLE_PROXY_ARRAY;
     }
 
@@ -100,7 +100,7 @@ public class EnhancedThrowableProxy implements Serializable {
         this.throwable = throwable;
         this.name = throwable.getClass().getName();
         this.message = throwable.getMessage();
-        this.localizedMessage = throwable.getLocalizedMessage();
+        //this.localizedMessage = throwable.getLocalizedMessage();
 
         final Stack<Class<?>> stack = ReflectionUtil.getCurrentStackTrace();
 
@@ -131,7 +131,7 @@ public class EnhancedThrowableProxy implements Serializable {
         this.throwable = cause;
         this.name = cause.getClass().getName();
         this.message = this.throwable.getMessage();
-        this.localizedMessage = this.throwable.getLocalizedMessage();
+        //this.localizedMessage = this.throwable.getLocalizedMessage();
 
         final StackTraceElement[] rootTrace = parent.getStackTrace();
         final StackTraceElement[] stackTrace = getStackTrace();
