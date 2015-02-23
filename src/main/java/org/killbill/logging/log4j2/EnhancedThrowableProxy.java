@@ -211,44 +211,34 @@ public class EnhancedThrowableProxy implements Serializable {
         final int commonCount, final StackTraceElement[] causedTrace,
         final ExtendedStackTraceElement[] extStackTrace, final Collection<String> ignorePackages) {
 
-        if (ignorePackages == null || ignorePackages.isEmpty()) {
-            for (final ExtendedStackTraceElement element : extStackTrace) {
-                formatEntry(element, sb);
+        if ( ignorePackages == null || ignorePackages.isEmpty() ) {
+            for ( int i = 0; i < extStackTrace.length; ++i ) {
+                sb.append("\tat ").append( extStackTrace[i] ).append('\n');
             }
-        } else {
+        }
+        else {
             int count = 0;
             for (int i = 0; i < extStackTrace.length; ++i) {
                 if ( ! ignoreElement(causedTrace[i], ignorePackages) ) {
                     if (count > 0) {
-                        if (count == 1) {
-                            sb.append("\t....\n");
-                        } else {
-                            sb.append("\t... suppressed ").append(count).append(" lines\n");
-                        }
+                        if (count == 1) sb.append("\t....\n");
+                        else sb.append("\t... suppressed ").append(count).append(" lines\n");
+
                         count = 0;
                     }
-                    formatEntry(extStackTrace[i], sb);
-                } else {
-                    ++count;
+                    sb.append("\tat ").append( extStackTrace[i] ).append('\n');
                 }
+                else { ++count; }
             }
             if (count > 0) {
-                if (count == 1) {
-                    sb.append("\t...\n");
-                } else {
-                    sb.append("\t... suppressed ").append(count).append(" lines\n");
-                }
+                if (count == 1) sb.append("\t...\n");
+                else sb.append("\t... suppressed ").append(count).append(" lines\n");
             }
         }
-        if (commonCount != 0) {
+
+        if ( commonCount != 0 ) {
             sb.append("\t... ").append(commonCount).append(" more").append('\n');
         }
-    }
-
-    private static void formatEntry(final ExtendedStackTraceElement extStackTraceElement, final StringBuilder sb) {
-        sb.append("\tat ");
-        sb.append(extStackTraceElement);
-        sb.append('\n');
     }
 
     /**
@@ -259,8 +249,9 @@ public class EnhancedThrowableProxy implements Serializable {
      * @param cause
      *        The Throwable to format.
      */
-    static void formatWrapper(final StringBuilder sb, final EnhancedThrowableProxy cause) {
-        formatWrapper(sb, cause, null);
+    @SuppressWarnings("unchecked")
+    private static void formatWrapper(final StringBuilder sb, final EnhancedThrowableProxy cause) {
+        formatWrapper(sb, cause, Collections.EMPTY_LIST);
     }
 
     /**
