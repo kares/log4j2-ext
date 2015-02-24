@@ -424,7 +424,7 @@ import org.apache.logging.log4j.util.ReflectionUtil;
      *        The name of the Class.
      * @return The Class object for the Class or null if it could not be located.
      */
-    private static Class<?> loadClass(final ClassLoader lastLoader, final String className) {
+    static Class<?> loadClass(final ClassLoader lastLoader, final String className) {
         if ( ! isValidClassName(className) ) return null; // handles "weird" (Ruby) names
 
         // XXX: this is overly complicated

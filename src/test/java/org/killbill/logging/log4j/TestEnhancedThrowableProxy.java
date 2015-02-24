@@ -180,4 +180,13 @@ public class TestEnhancedThrowableProxy {
         assertFalse( EnhancedThrowableProxy.isValidClassName("MonitorMixin::ConditionVariable") );
     }
 
+    @Test
+    public void shouldLoadClass() {
+        assertNull( EnhancedThrowableProxy.loadClass(null, "ferko.Suska") );
+        assertNull( EnhancedThrowableProxy.loadClass(null, "Ferko$Suska") );
+        assertNull( EnhancedThrowableProxy.loadClass(null, "MonitorMixin::ConditionVariable") );
+        assertNotNull( EnhancedThrowableProxy.loadClass(null, "java.util.ArrayList") );
+        assertNotNull( EnhancedThrowableProxy.loadClass(null, "java.util.Map$Entry") );
+    }
+
 }
