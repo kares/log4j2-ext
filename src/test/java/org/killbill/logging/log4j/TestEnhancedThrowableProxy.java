@@ -88,6 +88,18 @@ public class TestEnhancedThrowableProxy {
         extStackTrace = new EnhancedThrowableProxy(e).getExtendedStackTraceAsString();
 
         System.out.println( extStackTrace );
+
+        className = "MonitorMixin::ConditionVariable";
+        methodName = "signal";
+        fileName = "classpath:/META-INF/jruby.home/lib/ruby/1.9/monitor.rb";
+
+        element = new StackTraceElement(className, methodName, fileName, 139);
+
+        e.stackTrace = new StackTraceElement[] { element };
+
+        extStackTrace = new EnhancedThrowableProxy(e).getExtendedStackTraceAsString();
+
+        System.out.println( extStackTrace );
     }
 
     @Test
@@ -158,6 +170,14 @@ public class TestEnhancedThrowableProxy {
             return super.loadClass(name, resolve);
         }
 
+    }
+
+    @Test
+    public void isValidClassName() {
+        assertTrue( EnhancedThrowableProxy.isValidClassName("ferko.Suska") );
+        assertTrue( EnhancedThrowableProxy.isValidClassName("Ferko$Suska") );
+        assertTrue( EnhancedThrowableProxy.isValidClassName("org.jruby.RubyKernel$INVOKER$s$send19") );
+        assertFalse( EnhancedThrowableProxy.isValidClassName("MonitorMixin::ConditionVariable") );
     }
 
 }

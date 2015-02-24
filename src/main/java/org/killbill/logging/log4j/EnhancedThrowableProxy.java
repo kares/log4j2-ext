@@ -425,6 +425,8 @@ import org.apache.logging.log4j.util.ReflectionUtil;
      * @return The Class object for the Class or null if it could not be located.
      */
     private static Class<?> loadClass(final ClassLoader lastLoader, final String className) {
+        if ( ! isValidClassName(className) ) return null; // handles "weird" (Ruby) names
+
         // XXX: this is overly complicated
         Class<?> clazz;
         if (lastLoader != null) {
@@ -457,9 +459,13 @@ import org.apache.logging.log4j.util.ReflectionUtil;
         }
         catch (final RuntimeException e) { /* "custom" loaders e.g. on TC */
             LOGGER.warn("loadClass( {} ) loading class failed {}", className, e);
-            return null;
+            /* e.printStackTrace(System.out); */ return null;
         }
         return clazz;
+    }
+
+    static boolean isValidClassName(final String className) {
+        return javax.lang.model.SourceVersion.isName(className);
     }
 
     // NOTE: only due testability
